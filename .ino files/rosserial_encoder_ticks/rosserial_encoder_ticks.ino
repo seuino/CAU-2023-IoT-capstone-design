@@ -10,7 +10,13 @@
 #define MOTOR_2B_PIN 10
 #define ENABLE_2_PIN 11
 
-// #define BAUDRATE 19200
+#define GEAR_RATIO 986.61
+#define CPR 12
+#define WHEEL_DIA 60 //mm
+#define INTERMOTOR_DIST 150 //mm
+
+#define TICKS_PER_DEGREE GEAR_RATIO*CPR/360
+#define TICKS_PER_METER GEAR_RATIO*CPR/WHEEL_DIA/PI
 
 #include "DCMotor.h"
 
@@ -66,8 +72,8 @@ void loop() {
   dcMotor2.control(2, 255);
 
   // For monitoring in ros
-  left_ticks_msg.data = dcMotor1.degree;
-  right_ticks_msg.data = dcMotor2.degree;
+  left_ticks_msg.data = dcMotor1.encoder_ticks;
+  right_ticks_msg.data = dcMotor2.encoder_ticks;
   left_ticks.publish(&left_ticks_msg);
   right_ticks.publish(&right_ticks_msg);
   nh.spinOnce();
