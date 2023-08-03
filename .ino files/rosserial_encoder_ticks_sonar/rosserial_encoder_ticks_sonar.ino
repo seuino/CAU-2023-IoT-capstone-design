@@ -11,13 +11,13 @@
 #define ENCODER_1B_PIN 3
 #define MOTOR_1A_PIN 4
 #define MOTOR_1B_PIN 5
-#define ENABLE_1_PIN A0
+#define ENABLE_1_PIN 6
 
 #define ENCODER_2A_PIN 7
 #define ENCODER_2B_PIN 8
 #define MOTOR_2A_PIN 9
 #define MOTOR_2B_PIN 10
-#define ENABLE_2_PIN A1
+#define ENABLE_2_PIN 11
 
 const int GEAR_RATIO = 100;
 const int CPR = 12;
