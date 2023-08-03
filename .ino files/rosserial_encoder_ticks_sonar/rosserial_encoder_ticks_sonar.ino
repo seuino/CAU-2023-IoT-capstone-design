@@ -1,6 +1,7 @@
 // serial
 //////////////////////////////////////////////////
-// #define BAUDRATE 19200
+#define BAUDRATE 19200
+// #define USE_USBCON
 
 // dc motor
 //////////////////////////////////////////////////
@@ -18,13 +19,13 @@
 #define MOTOR_2B_PIN 10
 #define ENABLE_2_PIN A1
 
-#define GEAR_RATIO 986.61
-#define CPR 12
-#define WHEEL_DIA 60 //mm
-#define INTERMOTOR_DIST 150 //mm
+const int GEAR_RATIO = 100;
+const int CPR = 12;
+const int WHEEL_DIA = 60; //mm
+const int INTERMOTOR_DIST = 155; //mm
 
-#define TICKS_PER_DEGREE GEAR_RATIO*CPR/360
-#define TICKS_PER_METER GEAR_RATIO*CPR/WHEEL_DIA/PI
+const float TICKS_PER_DEGREE = GEAR_RATIO*CPR/360.0;
+const float TICKS_PER_METER = GEAR_RATIO*CPR/(WHEEL_DIA/1000.0)/PI;
 
 // sonar sensor
 //////////////////////////////////////////////////
@@ -36,18 +37,18 @@
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, 200); //max_distance = 200
 
 bool blocked = false;
-int rand_rotation;  //clockwise direction (+)
-int32_t left_ticks_rotation; //left_ticks at start of rotation
+int target_rotation;  //clockwise direction (+)
+int16_t left_ticks_rotation; //left_ticks at start of rotation
 
 // rosserial
 //////////////////////////////////////////////////
 #include <ros.h>
-#include <std_msgs/Int32.h>
+#include <std_msgs/Int16.h>
 
 ros::NodeHandle nh;
 
-std_msgs::Int32 left_ticks_msg;
-std_msgs::Int32 right_ticks_msg;
+std_msgs::Int16 left_ticks_msg;
+std_msgs::Int16 right_ticks_msg;
 ros::Publisher left_ticks("left_ticks", &left_ticks_msg);
 ros::Publisher right_ticks("right_ticks", &right_ticks_msg);
 
@@ -69,7 +70,7 @@ void doEncoder_2B() {
 }
 
 void setup() {
-  // Serial.begin(BAUDRATE);
+   Serial.begin(BAUDRATE);
 
   pinMode(ENCODER_1A_PIN, INPUT_PULLUP);
   pinMode(ENCODER_1B_PIN, INPUT_PULLUP);
@@ -100,7 +101,8 @@ void loop() {
     float distance = sonar.ping_cm();
     if (distance < 20) {
       blocked = true;
-      rand_rotation = random(-180, 180); //-180 ~ 179
+      // target_rotation = random(-180, 180); //-180 ~ 179
+      target_rotation = 90;
       left_ticks_rotation = dcMotor1.encoder_ticks;
     }
   }
@@ -108,28 +110,31 @@ void loop() {
   // motor control
   if (blocked == true) {
     // rotating
-    if (rand_rotation > 0) {
+    if (target_rotation > 0) {
       // turn right
-      dcMotor1.control(1, 150);
-      dcMotor2.control(2, 150);
+      dcMotor1.control(1, 120);
+      dcMotor2.control(1, 120); //reverse direction
     } else {
       // turn left
-      dcMotor1.control(2, 150);
-      dcMotor2.control(1, 150);
+      dcMotor1.control(2, 120);
+      dcMotor2.control(2, 120); //reverse direction
     }
+    
+    int16_t left_ticks_new = dcMotor1.encoder_ticks - left_ticks_rotation;
+    float progressed_rotation = ((left_ticks_new/TICKS_PER_METER) / ((INTERMOTOR_DIST/1000.0)/2))/PI*180;
+    Serial.println(progressed_rotation);
 
-    int progressed_rotation = ((dcMotor1.encoder_ticks - left_ticks_rotation)/TICKS_PER_METER / (WHEEL_DIA/2))/PI*180;
-    if(progressed_rotation >= rand_rotation > 0) {
+    if(progressed_rotation >= target_rotation > 0) {
       blocked = false;
     }
-    else if (progressed_rotation <= rand_rotation < 0) {
+    else if (progressed_rotation <= target_rotation < 0) {
       blocked = false;
     }
 
   } else {
     // moving forward
-    dcMotor1.control(1, 255);
-    dcMotor2.control(1, 255);
+    dcMotor1.control(1, 150);
+    dcMotor2.control(2, 150); //reverse direction
   }
 
   // For monitoring in ros

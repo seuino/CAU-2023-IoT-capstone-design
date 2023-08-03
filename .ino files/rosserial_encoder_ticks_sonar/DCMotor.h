@@ -10,7 +10,7 @@ class DCMotor {
 
     void control(int key, uint8_t pwm);
 
-    volatile int32_t encoder_ticks = 0;
+    volatile int16_t encoder_ticks = 0;
     float degree = 0;
 
   private:
