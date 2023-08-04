@@ -21,7 +21,7 @@
 
 const int GEAR_RATIO = 100;
 const int CPR = 12;
-const int WHEEL_DIA = 60; //mm
+const int WHEEL_DIA = 43; //mm
 const int INTERMOTOR_DIST = 155; //mm
 
 const float TICKS_PER_DEGREE = GEAR_RATIO*CPR/360.0;
@@ -70,7 +70,7 @@ void doEncoder_2B() {
 }
 
 void setup() {
-   Serial.begin(BAUDRATE);
+  Serial.begin(BAUDRATE);
 
   pinMode(ENCODER_1A_PIN, INPUT_PULLUP);
   pinMode(ENCODER_1B_PIN, INPUT_PULLUP);
