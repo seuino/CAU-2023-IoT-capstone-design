@@ -37,6 +37,7 @@ class DCMotor:
         self.degree = 0
 
         self.pwm = GPIO.PWM(self._enable_pin, 1000)
+        self.pwm.start
 
     def control(self, type, dc):
         self.pwm.ChangeDutyCycle(dc)
@@ -53,14 +54,14 @@ class DCMotor:
 dcmotor1 = DCMotor(MOTOR_1A_PIN, MOTOR_1B_PIN, ENABLE_1_PIN)
 dcmotor2 = DCMotor(MOTOR_2A_PIN, MOTOR_2B_PIN, ENABLE_2_PIN)
 
-def do_encoder_1A():
-     dcmotor1.encoder_ticks += 1 if GPIO.input(ENCODER_1A_PIN) == GPIO.input(ENCODER_1B_PIN) else -1
-def do_encoder_1B():
-     dcmotor1.encoder_ticks += -1 if GPIO.input(ENCODER_1A_PIN) == GPIO.input(ENCODER_1B_PIN) else 1
-def do_encoder_2A():
-     dcmotor2.encoder_ticks += 1 if GPIO.input(ENCODER_2A_PIN) == GPIO.input(ENCODER_2B_PIN) else -1
-def do_encoder_2B():
-     dcmotor2.encoder_ticks += -1 if GPIO.input(ENCODER_2A_PIN) == GPIO.input(ENCODER_2B_PIN) else 1
+def do_encoder_1A(channel):
+    dcmotor1.encoder_ticks += 1 if GPIO.input(ENCODER_1A_PIN) == GPIO.input(ENCODER_1B_PIN) else -1
+def do_encoder_1B(channel):
+    dcmotor1.encoder_ticks += -1 if GPIO.input(ENCODER_1A_PIN) == GPIO.input(ENCODER_1B_PIN) else 1
+def do_encoder_2A(channel):
+    dcmotor2.encoder_ticks += 1 if GPIO.input(ENCODER_2A_PIN) == GPIO.input(ENCODER_2B_PIN) else -1
+def do_encoder_2B(channel):
+    dcmotor2.encoder_ticks += -1 if GPIO.input(ENCODER_2A_PIN) == GPIO.input(ENCODER_2B_PIN) else 1
 
 GPIO.add_event_detect(ENCODER_1A_PIN, GPIO.BOTH, callback=do_encoder_1A)
 GPIO.add_event_detect(ENCODER_1B_PIN, GPIO.BOTH, callback=do_encoder_1B)
@@ -69,9 +70,9 @@ GPIO.add_event_detect(ENCODER_2B_PIN, GPIO.BOTH, callback=do_encoder_2B)
 
 try:
     while True:
-       dcmotor1.control(1, 255)
-       dcmotor2.control(1, 255)
-       print(dcmotor1.encoder_ticks, dcmotor2.encoder_ticks)
+        dcmotor1.control(1, 75)
+        dcmotor2.control(1, 75)
+        print(dcmotor1.encoder_ticks, dcmotor2.encoder_ticks)
 
 except KeyboardInterrupt:
-     GPIO.cleanup()
+    GPIO.cleanup()
