@@ -110,7 +110,7 @@ class SubscribeAndPublish:
         self.right_ticks_publisher = rospy.Publisher(name="right_ticks", data_class=Int32,
                                                 queue_size=1)
         
-        self.sub = rospy.Subscriber("/cmd_vel", Twist, self.callback,(self.dcmotor1, self.dcmotor2))
+        self.sub = rospy.Subscriber("/cmd_vel", Twist, self.callback(self.dcmotor1, self.dcmotor2))
         
 
     def callback(self, data, args):

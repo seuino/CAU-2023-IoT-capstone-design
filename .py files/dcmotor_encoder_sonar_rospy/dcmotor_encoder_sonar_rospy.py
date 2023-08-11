@@ -7,26 +7,6 @@ pi = 3.141592
 
 GPIO.setmode(GPIO.BCM)
 
-
-# rospy
-import rospy
-from std_msgs.msg import Int32
-
-left_ticks_msg = Int32()
-right_ticks_msg = Int32()
-
-rospy.initnode("raspi4", anonymous=False)
-
-left_ticks_publisher = rospy.Publisher(name="left_ticks_pub", data_class=Int32,
-                                       queue_size=1)
-right_ticks_publisher = rospy.Publisher(name="right_ticks_pub", data_class=Int32,
-                                        queue_size=1)
-
-rate = rospy.Rate(15)
-
-rospy.on_shutdown(GPIO.cleanup())
-
-
 # sonar
 TRIGGER_PIN = 17
 ECHO_PIN = 27
@@ -43,13 +23,14 @@ class Sonar:
         GPIO.setup(self._echo_pin, GPIO.IN)
 
         GPIO.output(self._trigger_pin, False)
-
+    
     def check(self):
         GPIO.output(self._trigger_pin, True)
         time.sleep(0.00001) #10us
         GPIO.output(self._trigger_pin, False)
 
         ##################################################
+        '''                   ERROR                    '''
         ##################################################
         while GPIO.input(self._echo_pin) == 0:
             pulse_start = time.time()
@@ -138,6 +119,58 @@ dcmotor1 = DCMotor(ENCODER_1A_PIN, ENCODER_1B_PIN,
 dcmotor2 = DCMotor(ENCODER_2A_PIN, ENCODER_2B_PIN,
                    MOTOR_2A_PIN, MOTOR_2B_PIN, ENABLE_2_PIN)
 
+# rospy
+import rospy
+from std_msgs.msg import Int32
+from geometry_msgs.msg import Twist
+
+left_ticks_msg = Int32()
+right_ticks_msg = Int32()
+
+rospy.initnode("raspi4", anonymous=False)
+
+rate = rospy.Rate(15)
+
+rospy.on_shutdown(GPIO.cleanup())
+
+left_ticks_publisher = rospy.Publisher(name="left_ticks_pub", data_class=Int32,
+                                       queue_size=1)
+right_ticks_publisher = rospy.Publisher(name="right_ticks_pub", data_class=Int32,
+                                        queue_size=1)
+
+
+class TwoWheeledMobile:
+    def __init__(self, *dcmotors, sonar):
+        self.linear_x
+        self.linear_y
+        self.linear_z
+        self.angular_x
+        self.angular_y
+        self.angular_z
+
+        self.status # rotation, smoving forward, stop
+        self.target_rotation
+        self.left_ticks_rotation_start
+        self.left_ticks_rotation_progressed
+
+        self.dcmotor1 = dcmotors[0]
+        self.dcmotor2 = dcmotors[1]
+
+        self.sonar = sonar
+
+    def get_cmd_vel(self, data):
+        self.linear_x = data.linear.x
+        self.linear_y = data.linear.y
+        self.linear_z = data.linear.z
+        self.angular_x = data.angular.x
+        self.angular_y = data.angular.y
+        self.angular_z = data.angular.z
+
+robotic_vacuum = TwoWheeledMobile((dcmotor1, dcmotor2), sonar0)
+
+rospy.Subscriber("/cmd_vel", Twist, robotic_vacuum.get_cmd_vel)
+
+
 # loop
 while not rospy.is_shutdown():
     # sonar check and apply to sonar0.blocked
@@ -166,17 +199,21 @@ while not rospy.is_shutdown():
             sonar0.blocked = False
         elif progressed_rotation <= target_rotation < 0:
             sonar0.blocked = False
-
     # moving forward
-    else:
+    elif ####
         dcmotor1.control(1, moving_dc)
         dcmotor2.control(1, moving_dc)
+    # stop
+    else:
+        pass
 
+
+    # publishing
     left_ticks_msg.data = dcmotor1.encoder_ticks
     right_ticks_msg.data = dcmotor2.encoder_ticks
     rospy.loginfo(left_ticks_msg)
     rospy.loginfo(right_ticks_msg)
     left_ticks_publisher.publish(left_ticks_msg)
     right_ticks_publisher.publish(right_ticks_msg)
-    
+
     rate.sleep()
