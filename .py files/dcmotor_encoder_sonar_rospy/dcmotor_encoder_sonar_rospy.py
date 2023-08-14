@@ -20,9 +20,9 @@ class Sonar:
         self._SPEED_OF_SOUND = 346 # 331 + 0.6*25 = 346m/s
         self._MAX_ECHO_TIME = self._MAX_DIST*1e-2*2 / self._SPEED_OF_SOUND
         self._MAX_PING_DELAY = 18000 # us
-        self._max_time
+        self._max_time = 0
         
-        self.distance
+        self.distance = 0
 
         GPIO.setup(self._trigger_pin, GPIO.OUT)
         GPIO.setup(self._echo_pin, GPIO.IN)
@@ -48,7 +48,7 @@ class Sonar:
         self._max_time = time.time() + self._MAX_ECHO_TIME
         return True
     
-    def check(self):
+    def check(self, event):
         if self.trigger() == False:
             self.distance = self._MAX_DIST # echo pin is not cleared
         while GPIO.input(self._echo_pin) == 0: # check echo pulse width
@@ -85,13 +85,14 @@ class DCMotor:
         self._CPR = 12.
         self._GEAR_RATIO = 100.
 
-        self._KP = 2.5
-        self._KI = 0.5
-        self._KD = 0.01
+        self._KP = 6
+        self._KI = 3
+        self._KD = 0.5
         self._acc_error = 0
 
         self.encoder_ticks = 0
 
+        self._is_first_record = True
         self.recorded_ticks = [0,0] # 2 recent ~ old
         self.recorded_angular_vel = [0,0]
 
@@ -119,9 +120,19 @@ class DCMotor:
         current_encoder_ticks = self.encoder_ticks
         self.recorded_ticks.insert(0, current_encoder_ticks)
         self.recorded_ticks.pop()
-        self.recorded_angular_vel.insert(0, (self.record_ticks[0] - self.record_ticks[-1]) \
+
+        ##################################################
+        ##                   CAUTION                    ##
+        ##################################################
+        # if self._is_first_record == True:
+        #     delta_t = 0.1
+        #     self._is_first_record = False
+        # else:
+        #     delta_t = event.last_duration
+        delta_t = 0.3
+        self.recorded_angular_vel.insert(0, (self.recorded_ticks[0] - self.recorded_ticks[-1]) \
                                              / self._CPR / self._GEAR_RATIO * 2*pi \
-                                             / event.last_duration)
+                                             / delta_t)
         self.recorded_angular_vel.pop()
 
     # def control_dc(self, type, dc):
@@ -136,7 +147,7 @@ class DCMotor:
     #         GPIO.output(self._motorA_pin, True)
     #         GPIO.output(self._motorB_pin, True)
     def control_dc(self, dc):
-        self.pwm.ChangeDutyCycle(dc)
+        self.pwm.ChangeDutyCycle(abs(dc))
         type = 1 if dc > 0 else 2
         if type == 1:
             GPIO.output(self._motorA_pin, True)
@@ -158,7 +169,7 @@ class DCMotor:
         dc_d = self._KD * pre_error
         dc_pid = dc_p + dc_i + dc_d
 
-        dc_pid = max(100, dc_pid) # max 100
+        dc_pid = min(100, dc_pid) # max 100
         self.control_dc(dc_pid)
 
 left_dcmotor = DCMotor(ENCODER_1A_PIN, ENCODER_1B_PIN,
@@ -174,11 +185,11 @@ from geometry_msgs.msg import Twist
 left_ticks_msg = Int32()
 right_ticks_msg = Int32()
 
-rospy.initnode("raspi4", anonymous=False, disable_signals=True)
+rospy.init_node("raspi4", anonymous=False, disable_signals=True)
 
 rate = rospy.Rate(15)
 
-rospy.on_shutdown(GPIO.cleanup())
+# rospy.on_shutdown(GPIO.cleanup)
 
 left_ticks_publisher = rospy.Publisher(name="left_ticks_pub", data_class=Int32,
                                        queue_size=1)
@@ -187,16 +198,16 @@ right_ticks_publisher = rospy.Publisher(name="right_ticks_pub", data_class=Int32
 
 
 class TwoWheeledMobile:
-    def __init__(self, *dcmotors, sonar):
+    def __init__(self, sonar, *dcmotors):
         self._INTERMOTOR_DIST = 115. # mm
         self._WHEEL_DIA = 43. # mm
 
-        self.linear_x # m/s
+        self.linear_x = 0.3 # m/s
         # self.linear_y
         # self.linear_z
         # self.angular_x
         # self.angular_y
-        self.angular_z # rad/s (counter-clockwise)
+        self.angular_z = 0 # rad/s (counter-clockwise)
 
         self._left_target_linear_vel = 0 # m/s
         self._right_target_linear_vel = 0
@@ -216,26 +227,26 @@ class TwoWheeledMobile:
         # self.angular_y = data.angular.y
         self.angular_z = data.angular.z # rad/s
 
+    def achieve_cmd_vel(self):
         self._left_target_linear_vel = self.linear_x \
             - (self.angular_z * self._INTERMOTOR_DIST*1e-3/2)
         self._right_target_linear_vel = self.linear_x \
             + (self.angular_z * self._INTERMOTOR_DIST*1e-3/2)
         
-        self._left_target_angular_vel = self._left_target_linear_vel / (self._WHEEL_DIA*1e-3/2)
-        self._right_target_angular_vel = self._right_target_linear_vel / (self._WHEEL_DIA*1e-3/2)
+        self._left_target_angular_vel = self._left_target_linear_vel / (self._WHEEL_DIA*1e-3*pi)
+        self._right_target_angular_vel = self._right_target_linear_vel / (self._WHEEL_DIA*1e-3*pi)
 
-    def achieve_cmd_vel(self):
         self.left_dcmotor.control_angular_vel(self._left_target_angular_vel)
         self.right_dcmotor.control_angular_vel(self._right_target_angular_vel)
 
-robotic_vacuum = TwoWheeledMobile((left_dcmotor, right_dcmotor), sonar)
+robotic_vacuum = TwoWheeledMobile(sonar, left_dcmotor, right_dcmotor)
 
 rospy.Subscriber("/cmd_vel", Twist, robotic_vacuum.get_cmd_vel)
 
 rospy.Timer(rospy.Duration(0.1), robotic_vacuum.left_dcmotor.record_ticks)
 rospy.Timer(rospy.Duration(0.1), robotic_vacuum.right_dcmotor.record_ticks)
 
-rospy.Timer(rospy.Duration(0.1), robotic_vacuum.sonar.check) # minimum 60ms cycle
+# rospy.Timer(rospy.Duration(0.1), robotic_vacuum.sonar.check) # minimum 60ms cycle
 
 
 # loop
@@ -243,18 +254,21 @@ while not rospy.is_shutdown():
     try:
         robotic_vacuum.achieve_cmd_vel()
 
+        print(left_dcmotor.recorded_angular_vel[0], robotic_vacuum._left_target_angular_vel)
+
         # publish topics
         left_ticks_msg.data = left_dcmotor.encoder_ticks
         right_ticks_msg.data = right_dcmotor.encoder_ticks
-        rospy.loginfo(left_ticks_msg)
-        rospy.loginfo(right_ticks_msg)
         left_ticks_publisher.publish(left_ticks_msg)
         right_ticks_publisher.publish(right_ticks_msg)
-
+        # rospy.loginfo(left_ticks_msg)
+        # rospy.loginfo(right_ticks_msg)
+        rate.sleep()
 
         ##################################################
         ##                   CAUTION                    ##
         ##################################################
-        rate.sleep()
+    
     except KeyboardInterrupt:
-        pass
+        GPIO.cleanup()
+        break
