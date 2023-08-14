@@ -169,7 +169,10 @@ class DCMotor:
         dc_d = self._KD * pre_error
         dc_pid = dc_p + dc_i + dc_d
 
-        dc_pid = min(100, dc_pid) # max 100
+        if dc_pid > 0:
+            dc_pid = min(100, dc_pid) # max 100
+        else:
+            dc_pid = max(-100, dc_pid) # min -100        
         self.control_dc(dc_pid)
 
 left_dcmotor = DCMotor(ENCODER_1A_PIN, ENCODER_1B_PIN,
