@@ -182,8 +182,17 @@ right_dcmotor = DCMotor(ENCODER_2A_PIN, ENCODER_2B_PIN,
 
 # rospy
 import rospy
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from geometry_msgs.msg import Twist
+from smbus2 import SMBus
+from mlx90614 import MLX90614
+
+# Initialize I2C bus and MLX90614 sensor
+bus = SMBus(1)
+sensor = MLX90614(bus, address=0x5A)
+
+# Define the temperature threshold (30 degrees Celsius)
+temperature_threshold = 29
 
 left_ticks_msg = Int32()
 right_ticks_msg = Int32()
@@ -194,11 +203,11 @@ rate = rospy.Rate(15)
 
 # rospy.on_shutdown(GPIO.cleanup)
 
-left_ticks_publisher = rospy.Publisher(name="left_ticks", data_class=Int32,
+left_ticks_publisher = rospy.Publisher(name="left_ticks_pub", data_class=Int32,
                                        queue_size=1)
-right_ticks_publisher = rospy.Publisher(name="right_ticks", data_class=Int32,
+right_ticks_publisher = rospy.Publisher(name="right_ticks_pub", data_class=Int32,
                                         queue_size=1)
-
+temperature_pub = rospy.Publisher('temperature_data', Float32, queue_size=10)
 
 class TwoWheeledMobile:
     def __init__(self, sonar, *dcmotors):
@@ -241,6 +250,7 @@ class TwoWheeledMobile:
 
         self.left_dcmotor.control_angular_vel(self._left_target_angular_vel)
         self.right_dcmotor.control_angular_vel(self._right_target_angular_vel)
+     
 
 robotic_vacuum = TwoWheeledMobile(sonar, left_dcmotor, right_dcmotor)
 
@@ -255,17 +265,35 @@ rospy.Timer(rospy.Duration(0.1), robotic_vacuum.right_dcmotor.record_ticks)
 # loop
 while not rospy.is_shutdown():
     try:
-        robotic_vacuum.achieve_cmd_vel()
+        # read temperature
+        ambient_temp = sensor.get_ambient()
+        object_temp = sensor.get_object_1()
 
-        print(left_dcmotor.recorded_angular_vel[0], robotic_vacuum._left_target_angular_vel)
+        # Publish temperature data
+        temperature_pub.publish(object_temp)
 
-        # publish topics
-        left_ticks_msg.data = left_dcmotor.encoder_ticks
-        right_ticks_msg.data = right_dcmotor.encoder_ticks
-        left_ticks_publisher.publish(left_ticks_msg)
-        right_ticks_publisher.publish(right_ticks_msg)
-        # rospy.loginfo(left_ticks_msg)
-        # rospy.loginfo(right_ticks_msg)
+        # Check if the temperature is below the threshold
+        if object_temp < temperature_threshold:
+            robotic_vacuum.achieve_cmd_vel()
+
+            print(left_dcmotor.recorded_angular_vel[0], robotic_vacuum._left_target_angular_vel)
+
+
+
+
+            # publish topics
+            left_ticks_msg.data = left_dcmotor.encoder_ticks
+            right_ticks_msg.data = right_dcmotor.encoder_ticks
+            left_ticks_publisher.publish(left_ticks_msg)
+            right_ticks_publisher.publish(right_ticks_msg)
+            # rospy.loginfo(left_ticks_msg)
+            # rospy.loginfo(right_ticks_msg)
+
+        else:
+            #publish the message for test
+            print("emergency")
+
+
         rate.sleep()
 
         ##################################################
