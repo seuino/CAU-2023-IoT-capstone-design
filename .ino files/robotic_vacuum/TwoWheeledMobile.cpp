@@ -1,4 +1,4 @@
-#include "DCMotor.h"
+#include "TwoWheeledMobile.h"
 // .cpp
 //////////////////////////////////////////////////
 DCMotor::DCMotor(uint8_t motorA_pin, uint8_t motorB_pin, uint8_t enable_pin) {
@@ -8,7 +8,7 @@ DCMotor::DCMotor(uint8_t motorA_pin, uint8_t motorB_pin, uint8_t enable_pin) {
   _enable_pin = enable_pin;
 
 }
-void DCMotor::control(int key, uint8_t pwm) {
+void DCMotor::control_pwm(int key, uint8_t pwm) {
 
   analogWrite(_enable_pin, pwm);
   switch(key) {

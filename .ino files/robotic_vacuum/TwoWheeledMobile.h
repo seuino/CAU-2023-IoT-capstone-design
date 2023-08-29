@@ -1,14 +1,14 @@
-#ifndef _DCMOTOR_h
-#define _DCMOTOR_h
+#ifndef _TWOWHEELEDMOBILE_h
+#define _TWOWHEELEDMOBILE_h
 
 #include "Arduino.h"
 // .h
 //////////////////////////////////////////////////
-class DCMotor {
+class TwoWheeledMobile {
   public:
-    DCMotor(uint8_t motorA_pin, uint8_t motorB_pin, uint8_t enable_pin);
+    TwoWheeledMobile(uint8_t motorA_pin, uint8_t motorB_pin, uint8_t enable_pin);
 
-    void control(int key, uint8_t pwm);
+    void control_pwm(int key, uint8_t pwm);
 
     volatile int32_t encoder_ticks = 0;
     float degree = 0;
