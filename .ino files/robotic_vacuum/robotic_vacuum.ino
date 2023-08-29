@@ -46,6 +46,28 @@ def getCmdVel(const geometry_msgs::Twist& data) {
   linear_x = data.linear.x;
   angular_z = data.angular.z;
 }
+def achieveCmdVel() {
+  if(angular_z > 0) { //회전 우선
+    dcMotor1.control_pwm(2,255);
+    dcMotor2.control_pwm(1,255);
+  }
+  else if(angular_z < 0) {
+    dcMotor1.control_pwm(1,255);
+    dcMotor2.control_pwm(2,255);
+  }
+  else if(linear_x > 0) {
+    dcMotor1.control_pwm(1,255);
+    dcMotor2.control_pwm(1,255);
+  }
+  else if(linear_x < 0) {
+    dcMotor1.control_pwm(2,255);
+    dcMotor2.control_pwm(2,255);
+  }
+  else {
+    dcMotor1.control_pwm(3,255);
+    dcMotor2.control_pwm(3,255);
+  }
+}
 ros::Subscriber <geometry_msgs::Twist> cmd_vel("/cmd_vel", &getCmdVel);
 
 //////////////////////////////////////////////////
@@ -56,8 +78,6 @@ void doEncoder_1A() {dcMotor1.encoder_ticks += (digitalRead(ENCODER_1A_PIN)==dig
 void doEncoder_1B() {dcMotor1.encoder_ticks += (digitalRead(ENCODER_1A_PIN)==digitalRead(ENCODER_1B_PIN))?-1:1;}
 void doEncoder_2A() {dcMotor2.encoder_ticks += (digitalRead(ENCODER_2A_PIN)==digitalRead(ENCODER_2B_PIN))?1:-1;}
 void doEncoder_2B() {dcMotor2.encoder_ticks += (digitalRead(ENCODER_2A_PIN)==digitalRead(ENCODER_2B_PIN))?-1:1;}
-
-TwoWheeledMobile roboticVacuum();
 
 void setup() {
   #ifdef SERIAL_DEBUG
@@ -91,8 +111,7 @@ void loop() {
   // For motor control
   // dcMotor1.control_pwm(1, 255);
   // dcMotor2.control_pwm(1, 255);
-
-
+  achieveCmdVel();
   
   // For monitoring in ros
   left_ticks_msg.data = dcMotor1.encoder_ticks;
