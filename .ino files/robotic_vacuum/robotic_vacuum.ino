@@ -1,3 +1,5 @@
+#define USE_USBCON
+
 // #define SERIAL_DEBUG
 #ifdef SERIAL_DEBUG
   #define BAUDRATE 115200
