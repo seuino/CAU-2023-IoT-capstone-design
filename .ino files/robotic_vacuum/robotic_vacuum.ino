@@ -30,7 +30,7 @@
 #define GEAR_RATIO 210.59
 #define CPR 12
 #define WHEEL_DIA 60 //mm
-#define INTERMOTOR_DIST 115 //mm
+#define INTERMOTOR_DIST 210 //mm
 
 #define TICKS_PER_DEGREE GEAR_RATIO*CPR/360
 #define TICKS_PER_METER GEAR_RATIO*CPR/WHEEL_DIA/PI
@@ -61,14 +61,13 @@ Servo servo2;
 // rosserial
 //////////////////////////////////////////////////
 #include <ros.h>
-#include <std_msgs/Int32.h>
-#include <std_msgs/Float32.h>
+#include <std_msgs/Int16.h>
 #include <geometry_msgs/Twist.h>
 
 ros::NodeHandle  nh;
 
-std_msgs::Int32 left_ticks_msg;
-std_msgs::Int32 right_ticks_msg;
+std_msgs::Int16 left_ticks_msg;
+std_msgs::Int16 right_ticks_msg;
 ros::Publisher left_ticks("/left_ticks", &left_ticks_msg);
 ros::Publisher right_ticks("/right_ticks", &right_ticks_msg);
 
