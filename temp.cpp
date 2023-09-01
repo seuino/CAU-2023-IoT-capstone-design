@@ -237,26 +237,26 @@ int main(int argc, char **argv) {
   //              Queue size caution              //
   //////////////////////////////////////////////////
   // Subscribe to ROS topics
-  ros::Subscriber subForRightCounts = node.subscribe("right_ticks", 100, Calc_Right, ros::TransportHints().tcpNoDelay());
-  ros::Subscriber subForLeftCounts = node.subscribe("left_ticks", 100, Calc_Left, ros::TransportHints().tcpNoDelay());
+  ros::Subscriber subForRightCounts = node.subscribe("right_ticks", 10, Calc_Right, ros::TransportHints().tcpNoDelay());
+  ros::Subscriber subForLeftCounts = node.subscribe("left_ticks", 10, Calc_Left, ros::TransportHints().tcpNoDelay());
   ros::Subscriber subInitialPose = node.subscribe("initial_2d", 1, set_initial_2d);
  
   // Publisher of simple odom message where orientation.z is an euler angle
-  odom_data_pub = node.advertise<nav_msgs::Odometry>("odom_data_euler", 100);
+  odom_data_pub = node.advertise<nav_msgs::Odometry>("odom_data_euler", 10);
  
   // Publisher of full odom message where orientation is quaternion
-  odom_data_pub_quat = node.advertise<nav_msgs::Odometry>("odom_data_quat", 100);
+  // odom_data_pub_quat = node.advertise<nav_msgs::Odometry>("odom_data_quat", 100);
  
-  ros::Rate loop_rate(30); 
+  ros::Rate loop_rate(10); 
      
   while(ros::ok()) {
      
     if(initialPoseRecieved) {
       update_odom();
-      publish_quat();
+      // publish_quat();
     }
     ros::spinOnce();
-    loop_rate.sleep();
+    // loop_rate.sleep();
   }
  
   return 0;
