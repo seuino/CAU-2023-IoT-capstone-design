@@ -77,14 +77,11 @@ void Calc_Left(const std_msgs::Int16& leftCount) {
          
     int leftTicks = (leftCount.data - lastCountL);
 
-    //////////////////////////////////////////////////
-    //         Process overflow, underflow          //
-    //////////////////////////////////////////////////
     if (leftTicks > 10000) { //underflow
-      leftTicks = 0 - (65535 - leftTicks); //(lastCountL - (-32768)) + (32767 - leftCount.data)
+      leftTicks = -65536 + leftTicks; //((-32768) - lastCountL) + (leftCount.data - 32767) - 1
     }
     else if (leftTicks < -10000) { //overflow
-      leftTicks = 65535-leftTicks; //(32767 - lastCountL) + (leftCount.data - (-32768))
+      leftTicks = 65536 + leftTicks; //(32767 - lastCountL) + (leftCount.data - (-32768)) + 1
     }
     else{}
     distanceLeft = leftTicks/TICKS_PER_METER;
@@ -100,14 +97,11 @@ void Calc_Right(const std_msgs::Int16& rightCount) {
  
     int rightTicks = rightCount.data - lastCountR;
     
-    //////////////////////////////////////////////////
-    //         Process overflow, underflow          //
-    //////////////////////////////////////////////////
     if (rightTicks > 10000) { //underflow
-      rightTicks = 0 - (65535 - rightTicks); //(lastCountL - (-32768)) + (32767 - leftCount.data)
+      rightTicks = -65536 + rightTicks; //((-32768) - lastCountL) + (leftCount.data - 32767) - 1
     }
     else if (rightTicks < -10000) { //overflow
-      rightTicks = 65535 - rightTicks; //(32767 - lastCountL) + (leftCount.data - (-32768))
+      rightTicks = 65536 + rightTicks; //(32767 - lastCountL) + (leftCount.data - (-32768)) + 1
     }
     else{}
     distanceRight = rightTicks/TICKS_PER_METER;
@@ -233,9 +227,6 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "ekf_odom_pub");
   ros::NodeHandle node;
  
-  //////////////////////////////////////////////////
-  //              Queue size caution              //
-  //////////////////////////////////////////////////
   // Subscribe to ROS topics
   ros::Subscriber subForRightCounts = node.subscribe("right_ticks", 10, Calc_Right, ros::TransportHints().tcpNoDelay());
   ros::Subscriber subForLeftCounts = node.subscribe("left_ticks", 10, Calc_Left, ros::TransportHints().tcpNoDelay());
@@ -245,18 +236,18 @@ int main(int argc, char **argv) {
   odom_data_pub = node.advertise<nav_msgs::Odometry>("odom_data_euler", 10);
  
   // Publisher of full odom message where orientation is quaternion
-  // odom_data_pub_quat = node.advertise<nav_msgs::Odometry>("odom_data_quat", 100);
+  odom_data_pub_quat = node.advertise<nav_msgs::Odometry>("odom_data_quat", 10);
  
   ros::Rate loop_rate(10); 
      
   while(ros::ok()) {
-     
+    
     if(initialPoseRecieved) {
       update_odom();
-      // publish_quat();
+      publish_quat();
     }
     ros::spinOnce();
-    // loop_rate.sleep();
+    loop_rate.sleep();
   }
  
   return 0;
