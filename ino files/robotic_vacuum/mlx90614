@@ -1,0 +1,50 @@
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+#include <ros.h>
+#include <std_msgs/Float32.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+// set ROS node and topic
+
+ros::NodeHandle nh;
+std_msgs::Float32 temperature_msg;
+ros::Publisher temperature_pub("temperature", &temperature_msg);
+
+const float threshold_temperature = 40.0; 
+
+void setup()
+{
+
+  Serial.begin(57600);
+
+  mlx.begin();
+
+  nh.initNode();
+  nh.advertise(temperature_pub);
+}
+
+void loop()
+{
+  // detect temperature
+  float temperature = mlx.readObjectTempC(); // 섭씨온도
+
+  // publish topic
+
+  temperature_msg.data = temperature;
+  temperature_pub.publish(&temperature_msg);
+
+  if (temperature >= threshold_temperature)
+  {
+    // 특정 동작
+    
+  }
+  else
+  {
+    // 기존 동작
+  }
+
+  nh.spinOnce();
+
+  delay(1000); 
+}
