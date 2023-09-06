@@ -5,15 +5,18 @@
 // rosserial
 #include <ros.h>
 #include <std_msgs/Int16.h>
+#include <std_msgs/UInt8.h>
 #include <geometry_msgs/Twist.h>
 
 //////////////////////////////////////////////////
-#define USE_USBCON
-
-// #define SERIAL_DEBUG
+#define SERIAL_DEBUG
 #define BAUDRATE 57600
 
-#define INTERVAL 100 //ms
+#ifndef SERIAL_DEBUG
+  #define USE_USBCON
+#endif
+
+#define INTERVAL 10 //ms
 
 // dcmotor
 #define ENCODER_1A_PIN 22
@@ -48,17 +51,26 @@ const float INTERMOTOR_DIST = 0.210; //m
 const float TICKS_PER_RADIAN = GEAR_RATIO*CPR/PI;
 const float TICKS_PER_METER = GEAR_RATIO*CPR/WHEEL_DIA/PI; //(TICKS_PER_RADIAN*PI)*(1/(WHEEL_DIA*PI))
 
+const float LEFT_K_B1 = 0;
+const float LEFT_K_B2 = 0;
+const float RIGHT_K_B1 = 0;
+const float RIGHT_K_B2 = 0;
+const float PUMP1_K_B1 = 0;
+const float PUMP1_K_B2 = 0;
+const float PUMP2_K_B1 = 0;
+const float PUMP2_K_B2 = 0;
+
 // servo
 #define SERVO_1_PIN 6
 #define SERVO_2_PIN 7
 
 //////////////////////////////////////////////////
 // dcmotor
-DCMotor left_dcmotor(MOTOR_1A_PIN, MOTOR_1B_PIN, ENABLE_1_PIN);
-DCMotor right_dcmotor(MOTOR_2A_PIN, MOTOR_2B_PIN, ENABLE_2_PIN);
+DCMotor left_dcmotor(MOTOR_1A_PIN, MOTOR_1B_PIN, ENABLE_1_PIN, LEFT_K_B1, LEFT_K_B2);
+DCMotor right_dcmotor(MOTOR_2A_PIN, MOTOR_2B_PIN, ENABLE_2_PIN, RIGHT_K_B1, RIGHT_K_B2);
 
-DCMotor pump1(MOTOR_3A_PIN, MOTOR_3B_PIN, ENABLE_3_PIN);
-DCMotor pump2(MOTOR_4A_PIN, MOTOR_4B_PIN, ENABLE_4_PIN);
+DCMotor pump1(MOTOR_3A_PIN, MOTOR_3B_PIN, ENABLE_3_PIN, PUMP1_K_B1, PUMP1_K_B2);
+DCMotor pump2(MOTOR_4A_PIN, MOTOR_4B_PIN, ENABLE_4_PIN, PUMP2_K_B1, PUMP2_K_B2);
 
 void doEncoder_1A() {left_dcmotor.encoder_ticks += (digitalRead(ENCODER_1A_PIN)==digitalRead(ENCODER_1B_PIN))?1:-1;}
 void doEncoder_1B() {left_dcmotor.encoder_ticks += (digitalRead(ENCODER_1A_PIN)==digitalRead(ENCODER_1B_PIN))?-1:1;}
@@ -77,7 +89,7 @@ std_msgs::Int16 right_ticks_msg;
 ros::Publisher left_ticks_pub("left_ticks", &left_ticks_msg);
 ros::Publisher right_ticks_pub("right_ticks", &right_ticks_msg);
 
-float linear_x = 0;
+float linear_x = 0.1;
 float angular_z = 0;
 
 void getCmdVel(const geometry_msgs::Twist& data) {
@@ -93,16 +105,16 @@ uint8_t servo1_pwm = 90;
 uint8_t servo2_pwm = 90;
 
 void getPump1Pwm(const std_msgs::UInt8& data) {
-  pump1_pwm = data;
+  pump1_pwm = data.data;
 }
 void getPump2Pwm(const std_msgs::UInt8& data) {
-  pump2_pwm = data;
+  pump2_pwm = data.data;
 }
 void getServo1Pwm(const std_msgs::UInt8& data) {
-  servo1_pwm = data;
+  servo1_pwm = data.data;
 }
 void getServo2Pwm(const std_msgs::UInt8& data) {
-  servo2_pwm = data;
+  servo2_pwm = data.data;
 }
 ros::Subscriber<std_msgs::UInt8> pump1_pwm_sub("pump1_pwm", &getPump1Pwm);
 ros::Subscriber<std_msgs::UInt8> pump2_pwm_sub("pump2_pwm", &getPump2Pwm);
@@ -159,7 +171,7 @@ void setup() {
 void loop() {
   nh.spinOnce();
 
-  uint32_t current_millis = millis()
+  uint32_t current_millis = millis();
   static uint32_t previous_millis = current_millis;
   if(current_millis - previous_millis > INTERVAL) {
     previous_millis = current_millis;
@@ -169,7 +181,7 @@ void loop() {
     //////////////////////////////////////////////////
     // left_dcmotor.control_pwm(1, 255);
     // right_dcmotor.control_pwm(1, 255);
-    achieveCmdVel("pid");
+    achieveCmdVel("linear");
     // pump1.control_pwm(1, 255);
     // pump2.control_pwm(1, 255);
     // servo1.write(90);
@@ -185,9 +197,14 @@ void loop() {
     right_ticks_pub.publish(&right_ticks_msg);
     
     #ifdef SERIAL_DEBUG
+      Serial.print("left: ");
       Serial.print(left_dcmotor.encoder_ticks);
       Serial.print(",");
+      Serial.print(left_dcmotor.velocity);
+      Serial.print("\tright: ");
       Serial.print(right_dcmotor.encoder_ticks);
+      Serial.print(",");
+      Serial.print(right_dcmotor.velocity);
       Serial.println();
     #endif
   }
@@ -210,15 +227,23 @@ void achieveCmdVel(const char *control_type) {
 
     left_dcmotor.controlPwm(left_pwm);
     right_dcmotor.controlPwm(right_pwm);
+
+    #ifdef SERIAL_DEBUG  
+      Serial.print("pwm: ");
+      Serial.print(left_pwm);
+      Serial.print(",");
+      Serial.print(right_pwm);
+      Serial.print("\t");
+    #endif
   }
   else if(control_type == "linear") {
-    // left_dcmotor.calcVel();
-    // right_dcmotor.calcVel();
+    left_dcmotor.calcVel();
+    right_dcmotor.calcVel();
 
     int16_t left_pwm = left_dcmotor.calcLinear(left_target_velocity);
     int16_t right_pwm = right_dcmotor.calcLinear(right_target_velocity);
 
-    if(angular.z == 0) { //only moving forward
+    if(angular_z == 0) { //only moving forward
       // Remove any differences in wheel velocities 
       // to make sure the robot goes straight
       static float pre_velocity_diff = 0;
@@ -231,6 +256,14 @@ void achieveCmdVel(const char *control_type) {
   
       left_pwm -= (int16_t)(velocity_diff_avg * drift_multiplier);
       right_pwm += (int16_t)(velocity_diff_avg * drift_multiplier);
+
+      #ifdef SERIAL_DEBUG  
+        Serial.print("pwm: ");
+        Serial.print(left_pwm);
+        Serial.print(",");
+        Serial.print(right_pwm);
+        Serial.print("\t");
+      #endif
     }
 
     // If the required PWM is of opposite sign as the output PWM, we want to
