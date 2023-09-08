@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="odom_pkg" type="odom_pub" name="odom_pub" output="screen"/>
+  <node pkg="odom_pkg" type="rviz_click_to_2d" name="rviz_click_to_2d" output="screen"/>
+  <!--launch rviz-->
+  <node pkg="rviz" type="rviz" name="rviz"/>
+</launch>
+
