@@ -1,0 +1,47 @@
+<launch>
+    <!-- Launch realsense camera node -->
+    <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">        
+        <arg name="align_depth" value="false" />
+        <arg name="enable_accel"     value="true"/>
+        <arg name="enable_gyro"      value="true"/>
+        <arg name="enable_sync" value="true" />
+        <arg name="color_width" value="424" />
+        <arg name="color_height" value="240" />
+        <arg name="color_fps" value="15" />
+        <arg name="depth_width" value="424" />
+        <arg name="depth_height" value="240" />
+        <arg name="depth_fps" value="15" />        
+  
+    </include>
+
+    <arg name="rate"  default="5"/>
+    <arg name="approx_sync" default="true" /> <!-- true for freenect driver -->
+    <arg name="rgbd_sync" default="true"/>
+    <!-- Launch nodelet manager and rgbd_sync node -->
+    <node if="$(arg rgbd_sync)" pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_sync/rgbd_sync nodelet_manager" output="screen">
+        <param name="compressed_rate"  type="double" value="$(arg rate)"/>
+        <param name="approx_sync"     value="$(arg approx_sync)"/>
+
+        <remap from="rgb/image"       to="/camera/color/image_raw"/>
+        <remap from="depth/image"     to="/camera/depth_registered/sw_registered/image_rect_raw"/>
+        <remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+    </node>
+
+    <node unless="$(arg rgbd_sync)" pkg="nodelet" type="nodelet" name="data_throttle" args="standalone rtabmap_legacy/data_throttle camera_nodelet_manager" output="screen">            <param name="rate"         type="double" value="$(arg rate)"/>
+        <param name="approx_sync"  type="bool"   value="$(arg approx_sync)"/>
+
+        <remap from="rgb/image_in"       to="camera/color/image_raw"/>
+        <remap from="depth/image_in"     to="/camera/depth_registered/sw_registered/image_rect_raw"/>
+        <remap from="rgb/camera_info_in" to="/camera/color/camera_info"/>
+
+        <remap from="rgb/image_out"       to="throttled/rgb/image_rect_color"/>
+        <remap from="depth/image_out"     to="throttled/depth_registered/image_raw"/>
+        <remap from="rgb/camera_info_out" to="throttled/rgb/camera_info"/>
+    </node>
+
+
+    <!-- braodcast the transfrom from camera_link to base_link to odom for navigation -->
+    <node pkg="tf_setup" name="tf_broadcaster" type="tf_broadcaster" />
+   
+
+</launch>
