@@ -4,6 +4,7 @@
 #include <std_msgs/Float32.h>
 
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+const int mq2Pin = A0;
 
 // set ROS node and topic
 
@@ -12,6 +13,7 @@ std_msgs::Float32 temperature_msg;
 ros::Publisher temperature_pub("temperature", &temperature_msg);
 
 const float threshold_temperature = 40.0; 
+const int threshold_smoke = 300;
 
 void setup()
 {
@@ -29,12 +31,13 @@ void loop()
   // detect temperature
   float temperature = mlx.readObjectTempC(); // 섭씨온도
 
+  int smokeValue = analogRead(mq2Pin);
   // publish topic
 
   temperature_msg.data = temperature;
   temperature_pub.publish(&temperature_msg);
 
-  if (temperature >= threshold_temperature)
+  if (temperature >= threshold_temperature && smokeValue >= threshold_smoke)
   {
     // 특정 동작
     
