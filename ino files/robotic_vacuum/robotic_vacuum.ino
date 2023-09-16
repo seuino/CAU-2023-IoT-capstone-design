@@ -9,7 +9,7 @@
 #include <geometry_msgs/Twist.h>
 
 //////////////////////////////////////////////////
-#define SERIAL_DEBUG
+// #define SERIAL_DEBUG
 #define BAUDRATE 57600
 
 #ifndef SERIAL_DEBUG
@@ -89,7 +89,7 @@ std_msgs::Int16 right_ticks_msg;
 ros::Publisher left_ticks_pub("left_ticks", &left_ticks_msg);
 ros::Publisher right_ticks_pub("right_ticks", &right_ticks_msg);
 
-float linear_x = 0.1;
+float linear_x = 0;
 float angular_z = 0;
 
 void getCmdVel(const geometry_msgs::Twist& data) {
@@ -181,7 +181,7 @@ void loop() {
     //////////////////////////////////////////////////
     // left_dcmotor.control_pwm(1, 255);
     // right_dcmotor.control_pwm(1, 255);
-    achieveCmdVel("linear");
+    achieveCmdVel("pid");
     // pump1.control_pwm(1, 255);
     // pump2.control_pwm(1, 255);
     // servo1.write(90);
