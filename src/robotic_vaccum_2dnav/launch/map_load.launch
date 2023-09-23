@@ -1,0 +1,17 @@
+<launch>
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" args="--Grid/RangeMax 5">
+        <param name="_database_path" value="/root/.ros/rtabmap.db"/>
+        <param name="subscribe_rgbd" value="true"/>
+        <param name="subscribe_depth" value="false"/>
+        <param name="subscribe_rgb" value="false"/>
+
+        <!-- <remap from="rgb/image"       to="/camera/color/image_raw"/> -->
+        <!-- <remap from="depth/image"     to="/camera/depth/image_rect_raw"/> -->
+        <remap from="rgb/camera_info" to="/camera/color/camera_info"/>
+        <remap from="/rgbd_image"     to="/rgbd_image"/>
+        <remap from="/odom"     to="/odom"/>
+    </node>
+
+</launch>
+
+
