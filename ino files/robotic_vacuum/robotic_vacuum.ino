@@ -1,3 +1,5 @@
+#define USE_USBCON
+
 // dcmotor
 #include "DCMotor.h"
 // servo
@@ -12,9 +14,9 @@
 // #define SERIAL_DEBUG
 #define BAUDRATE 57600
 
-#ifndef SERIAL_DEBUG
-  #define USE_USBCON
-#endif
+// #ifndef SERIAL_DEBUG
+//   #define USE_USBCON
+// #endif
 
 #define INTERVAL 10 //ms
 
@@ -175,6 +177,51 @@ void loop() {
   static uint32_t previous_millis = current_millis;
   if(current_millis - previous_millis > INTERVAL) {
     previous_millis = current_millis;
+
+    #ifdef SERIAL_DEBUG
+      char buffer[10];
+      if(Serial.available()) {
+        byte leng = Serial.readBytesUntil('\n', buffer, 20);
+        // Serial.print("Input data Lenght : ");
+        // Serial.println(leng);
+        // for(int i = 0; i < leng; i ++){
+        //   Serial.print(buffer[i]);
+        // }
+        // Serial.println("");
+
+        String str = String(buffer);
+        // Serial.println(str);
+
+        // /{wrist_angle}
+        // if(str.indexOf('/') != -1) {
+        //   int angle_index = str.indexOf('/') + 1;
+        //   int angle = str.substring(angle_index, angle_index+3).toInt();
+        //   wristMove(angle);
+        // }
+
+        if(str.indexOf("up") != -1) {
+          servo1_pwm = 97;
+          servo2_pwm = 89;
+        }
+        if(str.indexOf("down") != -1) {
+          servo1_pwm = 89;
+          servo2_pwm = 97;
+        }
+        if(str.indexOf("1") != -1) {
+          pump1_pwm = 255;
+        }
+        if(str.indexOf("2") != -1) {
+          pump2_pwm = 230;
+        }
+        if(str.indexOf("a") != -1) {
+          servo1_pwm = 90;
+          servo2_pwm = 90;
+          pump1_pwm = 0;
+          pump2_pwm = 0;
+        }
+      }
+    #endif
+
 
     //////////////////////////////////////////////////
     //                   Control                    //
