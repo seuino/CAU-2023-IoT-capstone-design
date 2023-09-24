@@ -1,0 +1,65 @@
+#include <Wire.h>
+#include <Adafruit_MLX90614.h>
+#include <ros.h>
+#include <std_msgs/Float32.h>
+#include <DHT.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+const int mq2Pin = A0;
+
+#define DHTPIN 2       
+#define DHTTYPE DHT11 
+
+DHT dht(DHTPIN, DHTTYPE);
+
+
+// set ROS node and topic
+
+ros::NodeHandle nh;
+std_msgs::Float32 temperature_msg;
+std_msgs::Float32 humid_msg;
+ros::Publisher temperature_pub("temperature", &temperature_msg);
+ros::Publisher pub_humid("humidity", &humid_msg);
+
+const float threshold_temperature = 40.0; 
+const int threshold_smoke = 300;
+
+void setup()
+{
+
+  Serial.begin(57600);
+
+  mlx.begin();
+
+  nh.initNode();
+  nh.advertise(temperature_pub);
+  nh.advertise(pub_humid);
+}
+
+void loop()
+{
+  // detect temperature
+  float temperature = mlx.readObjectTempC(); // 
+
+  // publish topic
+
+
+// dht11
+  float temp = dht.readTemperature();
+  float humidity = dht.readHumidity();
+
+  if (isnan(temp) || isnan(humidity)) {
+    return;
+  }
+
+
+  humid_msg.data = humidity;
+  pub_humid.publish(&humid_msg);
+// dht11
+
+
+
+  nh.spinOnce();
+
+  delay(1000); 
+}
