@@ -2,9 +2,15 @@
 #include <Adafruit_MLX90614.h>
 #include <ros.h>
 #include <std_msgs/Float32.h>
+#include <DHT.h>
 
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 const int mq2Pin = A0;
+
+
+DHT dht(DHTPIN, DHTTYPE);
+#define DHTPIN 2       
+#define DHTTYPE DHT11 
 
 // set ROS node and topic
 
@@ -24,6 +30,7 @@ void setup()
 
   nh.initNode();
   nh.advertise(temperature_pub);
+  nh.advertise(pub_humid);
 }
 
 void loop()
@@ -34,8 +41,18 @@ void loop()
   int smokeValue = analogRead(mq2Pin);
   // publish topic
 
-  temperature_msg.data = temperature;
-  temperature_pub.publish(&temperature_msg);
+
+// dht11
+  float humidity = dht.readHumidity();
+
+  if (isnan(temp) || isnan(humidity)) {
+    return;
+  }
+
+
+  humid_msg.data = humidity;
+  pub_humid.publish(&humid_msg);
+// dht11
 
   if (temperature >= threshold_temperature && smokeValue >= threshold_smoke)
   {
