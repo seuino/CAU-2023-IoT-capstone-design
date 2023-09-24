@@ -1,0 +1,55 @@
+#include <Wire.h>
+#include <ros.h>
+#include <std_msgs/Float32.h>
+#include <std_msgs/String.h> 
+#include <DHT.h>
+
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+#define DHTPIN A0
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+ros::NodeHandle nh;
+
+std_msgs::Float32 temperature_msg;
+std_msgs::Float32 humidity_msg;
+std_msgs::String emergency_msg; 
+
+ros::Publisher temperature_pub("temperature", &temperature_msg);
+ros::Publisher humidity_pub("humidity", &humidity_msg);
+ros::Publisher emergency_pub("emergency", &emergency_msg); 
+
+const float threshold_temperature = 40.0; 
+
+void setup()
+{
+  Serial.begin(57600);
+  mlx.begin();
+  dht.begin();
+  nh.initNode();
+  nh.advertise(temperature_pub);
+  nh.advertise(humidity_pub);
+  nh.advertise(emergency_pub); 
+}
+
+void loop()
+{
+  // Measure temperature using DHT11
+  float temperature = dht.readTemperature(); 
+  temperature_msg.data = temperature;
+  temperature_pub.publish(&temperature_msg);
+
+  // Measure humidity using DHT11
+  float humidity = dht.readHumidity();
+  humidity_msg.data = humidity;
+  humidity_pub.publish(&humidity_msg);
+
+  // Check if temperature exceeds threshold
+  if (temperature > threshold_temperature) {
+    emergency_msg.data = "emergency"; 
+    emergency_pub.publish(&emergency_msg);
+  }
+
+  nh.spinOnce();
+  delay(1000);
+}
